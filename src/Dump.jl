@@ -1,4 +1,4 @@
-"""
+@doc """
     create_when_to_save_array(log_factor, N_starts, N_max)
 
 Generates a sorted array of unique time indices at which data should be saved during a simulation.
@@ -13,8 +13,7 @@ Generates a sorted array of unique time indices at which data should be saved du
 
 # Description
 This function creates a series of time indices for saving data in a simulation, starting from multiple initial offsets and increasing exponentially based on the `log_factor`. The save times are designed to be more frequent at the beginning and become less frequent over time.
-"""
-
+""" 
 function create_when_to_save_array(log_factor, N_starts, N_max)
     start_times = 0:(N_max÷N_starts):N_max
     when_to_save = Int[collect(start_times)...]
@@ -140,9 +139,7 @@ function prepare_savefile(parameters, arrays)
     for fieldname in fieldnames(typeof(parameters.system))
         attributes(file)[string(fieldname)] = getfield(parameters.system, fieldname)
     end
-    for fieldname in fieldnames(typeof(parameters.interaction_potential))
-        attributes(file)[string(fieldname)] = getfield(parameters.interaction_potential, fieldname)
-    end
+    save_interaction_potential(file, parameters.interaction_potential)
     for fieldname in fieldnames(typeof(parameters.dump_info))
         if fieldname == :when_to_save_array 
             continue
@@ -154,4 +151,17 @@ function prepare_savefile(parameters, arrays)
 
 
     close(file)
+end
+
+"""
+    save_interaction_potential(file, interaction_potential)
+
+Stores the fields of the interaction potential as attributes of the HDF5 file.
+Potentials with fields that cannot be stored as attributes (`MariKurchan`)
+specialize this method.
+"""
+function save_interaction_potential(file, interaction_potential::InteractionPotential)
+    for fieldname in fieldnames(typeof(interaction_potential))
+        attributes(file)[string(fieldname)] = getfield(interaction_potential, fieldname)
+    end
 end

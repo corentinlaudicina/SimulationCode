@@ -100,7 +100,7 @@ function calculate_full_energy_no_neigh(arrays, parameters)
             end
             rj = r_array[particle_j]
             Dj = D_array[particle_j]
-            rij2 = calculate_squared_distance(ri,rj, box_size)
+            rij2 = sum(pair_displacement(ri, rj, particle_i, particle_j, box_size, interaction_potential).^2)
             mean_d = find_mean_D(Di, Dj, interaction_potential)
             mean_d_squared = mean_d * mean_d
             energy += ifelse(r²_cutoff * mean_d_squared < rij2, 0.0, potential(rij2, mean_d_squared, interaction_potential))
@@ -147,7 +147,7 @@ function calculate_energy_no_neigh_i(particle_i, ri, Di, arrays, parameters)
         end
         rj = r_array[particle_j]
         Dj = D_array[particle_j]
-        rij2 = calculate_squared_distance(ri, rj, box_size)
+        rij2 = sum(pair_displacement(ri, rj, particle_i, particle_j, box_size, interaction_potential).^2)
         mean_d = find_mean_D(Di, Dj, interaction_potential)
         mean_d_squared = mean_d * mean_d
         energy += ifelse(r²_cutoff * mean_d_squared < rij2, 0.0, potential(rij2, mean_d_squared, interaction_potential))
@@ -314,6 +314,22 @@ box size `box_size`.
     return sum(dr.^2)
 end
 
+"""
+    pair_displacement(ri, rj, particle_i, particle_j, box_size, interaction_potential)
+
+Calculates the separation vector between particles i and j that enters the
+interaction potential, considering periodic boundary conditions.
+
+For most potentials this is the minimum image of `ri - rj`. Potentials with
+quenched pair shifts (`MariKurchan`) specialize this method to add the shift
+of the pair.
+"""
+@inline function pair_displacement(ri, rj, particle_i, particle_j, box_size, ::InteractionPotential)
+    dr = ri - rj
+    dr -= round.(dr / box_size) * box_size
+    return dr
+end
+
 
 """
     GC_inner_loop(interaction_potential, r_array, ri, N_neighbors, particle_i, D_array, box_size, r²_cutoff, neighbor_list)
@@ -351,7 +367,6 @@ using the Gaussian Core (GC) potential within its neighborhood defined by the
 - The `@turbo` macro is used for loop optimization, enhancing computational 
   efficiency.
 """
-
 function GC_inner_loop(interaction_potential, r_array, ri, N_neighbors, particle_i, D_array, box_size, r²_cutoff, neighbor_list)
     ϵ = interaction_potential.ϵ
     Uc = interaction_potential.Uc
@@ -572,7 +587,7 @@ function find_energy(particle_i, ri, Di, arrays, parameters, neighborlist)
             particle_j = neighbor_list[neighbor_index, particle_i]
             rj = r_array[particle_j]
             Dj = D_array[particle_j]
-            rij2 = calculate_squared_distance(ri, rj, box_size)
+            rij2 = sum(pair_displacement(ri, rj, particle_i, particle_j, box_size, interaction_potential).^2)
             mean_d = find_mean_D(Di, Dj, interaction_potential)
             mean_d_squared = mean_d * mean_d
             if r²_cutoff * mean_d_squared > rij2
@@ -606,7 +621,6 @@ steps.
   range [0, 1] and then scales and shifts them to the desired range.
 - The displacements are random and independent for each element in the array.
 """
-
 @inline function populate_random_displacement_array!(a, N, max_displacement)
     rand!(a)
     for j = 1:N

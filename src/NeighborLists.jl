@@ -24,12 +24,6 @@ It constructs Verlet lists by decomposing the simulation box into cells and upda
 function update_neighbor_lists!(arrays, parameters, output, neighborlist)
     output.N_neighbor_list_rebuilds += 1
 
-    r_array = arrays.r_array
-    box = neighborlist.box
-    celllist = neighborlist.celllist
-    auxilliary_struct = neighborlist.auxilliary_struct    
-    celllist = UpdateCellList!(r_array, box, celllist, auxilliary_struct, parallel=false)
-    
     interaction_potential = parameters.interaction_potential
     # neighborlist.neighbor_list_full .= 0
     neighborlist.neighbor_numbers_full .= 0
@@ -42,6 +36,23 @@ function update_neighbor_lists!(arrays, parameters, output, neighborlist)
     neighborlist.displacement_squared_array .= 0.0
 
     r_cutoff = sqrt(parameters.force_cutoff2)
+
+    find_neighbor_pairs!(arrays, parameters, neighborlist, r_cutoff, interaction_potential)
+end
+
+"""
+    find_neighbor_pairs!(arrays, parameters, neighborlist, r_cutoff, interaction_potential)
+
+Calls `add_pair!` for every pair of particles within the Verlet sphere, using
+cell lists. Potentials whose pair separation is not the plain minimum image
+distance (`MariKurchan`) specialize this method.
+"""
+function find_neighbor_pairs!(arrays, parameters, neighborlist, r_cutoff, interaction_potential)
+    r_array = arrays.r_array
+    box = neighborlist.box
+    celllist = neighborlist.celllist
+    auxilliary_struct = neighborlist.auxilliary_struct
+    celllist = UpdateCellList!(r_array, box, celllist, auxilliary_struct, parallel=false)
 
     map_pairwise!(
         (x,y,i,j,d2,pairs) -> add_pair!(i,j,d2,neighborlist, arrays, r_cutoff, interaction_potential),

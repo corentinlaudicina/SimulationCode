@@ -7,7 +7,21 @@ end
 end
 
 @inline function find_mean_D(Di, Dj, U::Berthier)
-    return (Di + Dj)*0.5 * (1.0 - U.ζ * abs(Di - Dj)) 
+    return (Di + Dj)*0.5 * (1.0 - U.ζ * abs(Di - Dj))
+end
+
+# The Mari-Kurchan model only shifts the pair separation (see pair_displacement),
+# the interaction itself is that of the base potential.
+@inline function find_mean_D(Di, Dj, U::MariKurchan)
+    return find_mean_D(Di, Dj, U.potential)
+end
+
+@inline function potential(r_squared, mean_d_squared, U::MariKurchan)
+    return potential(r_squared, mean_d_squared, U.potential)
+end
+
+@inline function force(r_squared, mean_d_squared, U::MariKurchan)
+    return force(r_squared, mean_d_squared, U.potential)
 end
 
 @inline function potential(r_squared, mean_d_squared, ::HardSphere)

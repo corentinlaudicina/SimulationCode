@@ -294,8 +294,7 @@ function calculate_new_forces!(arrays, parameters, neighborlist)
             for neighbor_index = 1:N_neighbors
                 particle_j = neighbor_list[neighbor_index, particle_i]
                 rj = r_array[particle_j]
-                dr = ri - rj
-                dr -= round.(dr / box_size) * box_size
+                dr = pair_displacement(ri, rj, particle_i, particle_j, box_size, interaction_potential)
                 rij2 = sum(dr.^2)
                 Dj = D_array[particle_j]
                 mean_d = find_mean_D(Di, Dj, interaction_potential)

@@ -59,6 +59,38 @@ struct Berthier <: InteractionPotential
     end
 end
 
+"""
+    MariKurchan{U, dims} <: InteractionPotential
+
+Mari-Kurchan model: particles i and j interact through the base potential
+`potential` evaluated at the shifted separation `r_i - r_j + A_ij`, where the
+quenched random shifts `A_ij = -A_ji` are uniformly distributed in the box.
+This removes all spatial loops between interacting particles, so the liquid is
+exactly described by the second virial approximation and equilibrium states
+can be planted (see `plant_configuration!`).
+
+# Fields
+- `potential::U`: The base pair potential (e.g. `HardSphere()`, `Berthier()`).
+- `shifts::Matrix{SVector{dims, Float64}}`: `shifts[i, j]` holds `A_ij`.
+  Requires O(N²) memory.
+"""
+struct MariKurchan{U<:InteractionPotential, dims} <: InteractionPotential
+    potential::U
+    shifts::Matrix{SVector{dims, Float64}}
+end
+
+"""
+    MariKurchan(potential, N, dims, box_size)
+
+Creates a Mari-Kurchan model for `N` particles with base pair potential
+`potential`, with shifts drawn uniformly in the box (see `randomize_shifts!`).
+"""
+function MariKurchan(potential::InteractionPotential, N, dims, box_size)
+    U = MariKurchan{typeof(potential), dims}(potential, Matrix{SVector{dims, Float64}}(undef, N, N))
+    randomize_shifts!(U, box_size)
+    return U
+end
+
 abstract type System end
 
 mutable struct Brownian <: System 

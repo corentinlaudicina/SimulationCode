@@ -34,6 +34,11 @@ function generate_diameters!(arrays, parameters, U::Weysser)
     println("The volume fraction is φ = $(find_volume_fraction(D_array, parameters.box_size, parameters.system.dims))")
 end
 
+function generate_diameters!(arrays, parameters, U::MariKurchan)
+    # the diameters are those of the base potential
+    generate_diameters!(arrays, parameters, U.potential)
+end
+
 function sample_A_sigma3(σmin, A)
     P = rand()
     σ = sqrt(1/(σmin^-2 - 2P/A))
